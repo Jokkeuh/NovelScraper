@@ -12,6 +12,8 @@ using iText.Kernel.Events;
 using iText.Layout.Element;
 using iText.Layout.Renderer;
 using System.Net;
+using iText.IO.Image;
+using iText.Kernel.Pdf.Filters;
 
 namespace NovelScraper.Controllers
 {
@@ -45,16 +47,17 @@ namespace NovelScraper.Controllers
 
 
 
-            var paragraphs = htmldoc.DocumentNode.Descendants("p")
-
-                                            .Select(node => WebUtility.HtmlDecode(node.InnerHtml))
+            var paragraphs = htmldoc.DocumentNode.Descendants()
+                .Where(node => node.Name.Equals("p", StringComparison.OrdinalIgnoreCase) ||
+                              node.Name.Equals("h1", StringComparison.OrdinalIgnoreCase))
+                .Select(node => WebUtility.HtmlDecode(node.InnerHtml))
                                             .Distinct()
                                             .ToList();
             return paragraphs;
         }
 
 
-        private void WriteToPdf(List<string> lines, string name)
+        private async void WriteToPdf(List<string> lines, string name)
         {
             var pdfPath = $"{name}.pdf";
 
@@ -66,12 +69,57 @@ namespace NovelScraper.Controllers
 
                     foreach (var line in lines)
                     {
-                        var paragraph = new Paragraph(string.Join(Environment.NewLine, line)).SetFontSize(12);
-                        document.Add(paragraph);
+                        if (line.StartsWith("<img"))
+                        {
+                            var path = await DownloadImgFromUrl(line);
+                            if (path != "failed")
+                            {
+                                var image = new Image(ImageDataFactory.Create(path));
+                                document.Add(image);
+                            }
+                        }
+                        if (line.Contains("<i class"))
+                        {
+                            //nothing needed from this
+                        }
+                        else
+                        {
+                            var paragraph = new Paragraph(string.Join(Environment.NewLine, line)).SetFontSize(12);
+                            document.Add(paragraph);
+                        }
+                        
                     }
                 }
             }
         }
+
+        private async Task<string> DownloadImgFromUrl(string url)
+        {
+            string imagePath = url.Split("src=\"")[1].Split("\"")[0];
+
+            try
+            {
+                using(HttpClient client = new())
+                {
+                    byte[] imageData = await client.GetByteArrayAsync(imagePath);
+                    string fileName = Path.GetTempFileName();
+                    System.IO.File.WriteAllBytes(fileName, imageData);
+                    imagePath = fileName;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error downloading image: {ex.Message}");
+                return "failed";
+            }
+
+
+            return imagePath;
+        }
+
+
+
+
         //private void WriteToPdf(List<string> lines, string name)
         //{
         //    var pdfPath = $"{name}.pdf";
@@ -119,112 +167,112 @@ namespace NovelScraper.Controllers
 
         private void CreateAllChapters()
         {
-            //volume 1
-            CreateChapter("1", "prologue");
+            ////volume 1
+            //CreateChapter("1", "prologue");
             CreateChapter("1", "1");
-            CreateChapter("1", "2");
-            CreateChapter("1", "3");
-            CreateChapter("1", "4");
-            CreateChapter("1", "epilogue");
-            ////volume 2
-            CreateChapter("2", "prologue");
-            CreateChapter("2", "1");
-            CreateChapter("2", "2");
-            CreateChapter("2", "3");
-            CreateChapter("2", "4");
-            CreateChapter("2", "epilogue");
-            //volume 3
-            CreateChapter("3", "prologue");
-            CreateChapter("3", "1");
-            CreateChapter("3", "2");
-            CreateChapter("3", "3");
-            CreateChapter("3", "4");
-            CreateChapter("3", "epilogue");
-            //volume 4 
-            CreateChapter("4", "prologue");
-            CreateChapter("4", "1");
-            CreateChapter("4", "2");
-            CreateChapter("4", "3");
-            CreateChapter("4", "4");
-            CreateChapter("4", "epilogue");
-            //volume 5
-            CreateChapter("5", "prologue");
-            CreateChapter("5", "1");
-            CreateChapter("5", "2");
-            CreateChapter("5", "3");
-            CreateChapter("5", "4");
-            CreateChapter("5", "epilogue");
-            //volume 6
-            CreateChapter("6", "prologue");
-            CreateChapter("6", "5");
-            CreateChapter("6", "6");
-            CreateChapter("6", "7");
-            //volume 7
-            CreateChapter("7", "8");
-            CreateChapter("7", "9");
-            CreateChapter("7", "10");
-            //volume 8
-            CreateChapter("8", "11");
-            CreateChapter("8", "12");
-            CreateChapter("8", "13");
-            //volume 9
-            CreateChapter("9", "14");
-            //volume 10
-            CreateChapter("10", "prologue");
-            CreateChapter("10", "1");
-            CreateChapter("10", "2");
-            CreateChapter("10", "3");
-            CreateChapter("10", "4");
-            //volume 11
-            CreateChapter("11", "5");
-            CreateChapter("11", "6");
-            CreateChapter("11", "7");
-            CreateChapter("11", "8");
-            CreateChapter("11", "9");
-            //volume 12
-            CreateChapter("12", "intermission");
-            CreateChapter("12", "10");
-            CreateChapter("12", "11");
-            CreateChapter("12", "12");
-            CreateChapter("12", "13");
-            CreateChapter("12", "14");
-            //olume 13
-            CreateChapter("13", "intermission-1");
-            CreateChapter("13", "intermission-2");
-            CreateChapter("13", "15");
-            CreateChapter("13", "16");
-            CreateChapter("13", "17");
-            CreateChapter("13", "18");
-            //volume 14
-            CreateChapter("14", "intermission");
-            CreateChapter("14", "19");
-            CreateChapter("14", "20");
-            CreateChapter("14", "21");
-            //volume 15
-            CreateChapter("15", "intermission");
-            CreateChapter("15", "epilogue-2");
-            CreateChapter("15", "22");
-            CreateChapter("15", "23");
-            CreateChapter("15", "24");
-            CreateChapter("15", "25");
-            CreateChapter("15", "epilogue");
-            //volume 16
-            CreateChapter("16", "prologue");
-            CreateChapter("16", "1");
-            CreateChapter("16", "2");
-            CreateChapter("16", "3");
-            //volume 17 
-            CreateChapter("17", "intermission");
-            CreateChapter("17", "4");
-            CreateChapter("17", "5");
-            CreateChapter("17", "6");
-            CreateChapter("17", "7");
-            CreateChapter("17", "epilogue");
-            //volume 18
-            CreateChapter("18", "prologue");
-            CreateChapter("18", "1");
-            CreateChapter("18", "2");
-            CreateChapter("18", "3");
+            //CreateChapter("1", "2");
+            //CreateChapter("1", "3");
+            //CreateChapter("1", "4");
+            //CreateChapter("1", "epilogue");
+            //////volume 2
+            //CreateChapter("2", "prologue");
+            //CreateChapter("2", "1");
+            //CreateChapter("2", "2");
+            //CreateChapter("2", "3");
+            //CreateChapter("2", "4");
+            //CreateChapter("2", "epilogue");
+            ////volume 3
+            //CreateChapter("3", "prologue");
+            //CreateChapter("3", "1");
+            //CreateChapter("3", "2");
+            //CreateChapter("3", "3");
+            //CreateChapter("3", "4");
+            //CreateChapter("3", "epilogue");
+            ////volume 4 
+            //CreateChapter("4", "prologue");
+            //CreateChapter("4", "1");
+            //CreateChapter("4", "2");
+            //CreateChapter("4", "3");
+            //CreateChapter("4", "4");
+            //CreateChapter("4", "epilogue");
+            ////volume 5
+            //CreateChapter("5", "prologue");
+            //CreateChapter("5", "1");
+            //CreateChapter("5", "2");
+            //CreateChapter("5", "3");
+            //CreateChapter("5", "4");
+            //CreateChapter("5", "epilogue");
+            ////volume 6
+            //CreateChapter("6", "prologue");
+            //CreateChapter("6", "5");
+            //CreateChapter("6", "6");
+            //CreateChapter("6", "7");
+            ////volume 7
+            //CreateChapter("7", "8");
+            //CreateChapter("7", "9");
+            //CreateChapter("7", "10");
+            ////volume 8
+            //CreateChapter("8", "11");
+            //CreateChapter("8", "12");
+            //CreateChapter("8", "13");
+            ////volume 9
+            //CreateChapter("9", "14");
+            ////volume 10
+            //CreateChapter("10", "prologue");
+            //CreateChapter("10", "1");
+            //CreateChapter("10", "2");
+            //CreateChapter("10", "3");
+            //CreateChapter("10", "4");
+            ////volume 11
+            //CreateChapter("11", "5");
+            //CreateChapter("11", "6");
+            //CreateChapter("11", "7");
+            //CreateChapter("11", "8");
+            //CreateChapter("11", "9");
+            ////volume 12
+            //CreateChapter("12", "intermission");
+            //CreateChapter("12", "10");
+            //CreateChapter("12", "11");
+            //CreateChapter("12", "12");
+            //CreateChapter("12", "13");
+            //CreateChapter("12", "14");
+            ////olume 13
+            //CreateChapter("13", "intermission-1");
+            //CreateChapter("13", "intermission-2");
+            //CreateChapter("13", "15");
+            //CreateChapter("13", "16");
+            //CreateChapter("13", "17");
+            //CreateChapter("13", "18");
+            ////volume 14
+            //CreateChapter("14", "intermission");
+            //CreateChapter("14", "19");
+            //CreateChapter("14", "20");
+            //CreateChapter("14", "21");
+            ////volume 15
+            //CreateChapter("15", "intermission");
+            //CreateChapter("15", "epilogue-2");
+            //CreateChapter("15", "22");
+            //CreateChapter("15", "23");
+            //CreateChapter("15", "24");
+            //CreateChapter("15", "25");
+            //CreateChapter("15", "epilogue");
+            ////volume 16
+            //CreateChapter("16", "prologue");
+            //CreateChapter("16", "1");
+            //CreateChapter("16", "2");
+            //CreateChapter("16", "3");
+            ////volume 17 
+            //CreateChapter("17", "intermission");
+            //CreateChapter("17", "4");
+            //CreateChapter("17", "5");
+            //CreateChapter("17", "6");
+            //CreateChapter("17", "7");
+            //CreateChapter("17", "epilogue");
+            ////volume 18
+            //CreateChapter("18", "prologue");
+            //CreateChapter("18", "1");
+            //CreateChapter("18", "2");
+            //CreateChapter("18", "3");
         }
 
 
